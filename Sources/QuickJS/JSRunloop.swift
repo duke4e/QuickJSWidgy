@@ -75,7 +75,7 @@ final class JSRunloop : JSModule {
         
         let interval = JSValue(context, value: arguments[1], dup: true).double ?? 0
 
-        if #available(macOS 10.12, *) {
+        if #available(macOS 10.12, watchOS 3.0, *) {
             let timer = Timer(timeInterval: interval/1000, repeats: false) { timer in
                 context.opaque?.call(function: function, argc: argc-2, argv: arguments+2)
             }
