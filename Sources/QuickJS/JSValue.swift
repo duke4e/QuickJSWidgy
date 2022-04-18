@@ -80,7 +80,7 @@ extension JSValue {
     }
 }
 
-extension JSValue {
+public extension JSValue {
     var isFunction: Bool {
         guard let context = context?.context else { return false }
         return JS_IsFunction(context, cValue) != 0
