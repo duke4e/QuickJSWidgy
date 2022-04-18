@@ -55,7 +55,7 @@ typedef struct JSClass JSClass;
 typedef uint32_t JSClassID;
 typedef uint32_t JSAtom;
 
-#if INTPTR_MAX >= INT64_MAX
+/*#if INTPTR_MAX >= INT64_MAX
 #define JS_PTR64
 #define JS_PTR64_DEF(a) a
 #else
@@ -64,7 +64,7 @@ typedef uint32_t JSAtom;
 
 #ifndef JS_PTR64
 #define JS_NAN_BOXING
-#endif
+#endif*/
 
 enum {
     /* all tags with a reference count are negative */
