@@ -6,6 +6,7 @@ let package = Package(
     platforms: [
         .macOS(.v11),
         .iOS(.v14),
+        .watchOS(.v3)
     ],
     products: [
         .library(name: "QuickJS", targets: ["QuickJS"])
