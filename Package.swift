@@ -19,6 +19,8 @@ let package = Package(
             path: "Sources/QuickJSC"),
         .target(
             name: "QuickJS",
-            dependencies: ["QuickJSC"])
+            path: "Sources/QuickJS",
+            dependencies: ["QuickJSC"]
+            )
     ]
 )

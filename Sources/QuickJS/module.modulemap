@@ -1,6 +1,0 @@
-module QuickJS {
-    header "QJSConfiguration.h"
-    header "QJSContext.h"
-    header "QJSRuntime.h"
-    export *
-}
