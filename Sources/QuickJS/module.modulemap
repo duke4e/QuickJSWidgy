@@ -1,5 +1,4 @@
 module QuickJS {
-     umbrella header "QJS.h"
-     export *
-     module * { export * }
- }
+    header "QJS.h"
+    export *
+}
