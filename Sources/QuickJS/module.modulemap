@@ -1,4 +1,0 @@
-module QuickJS {
-    header "QJS.h"
-    export *
-}
