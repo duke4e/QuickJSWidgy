@@ -20,11 +20,9 @@ let package = Package(
         .target(
             name: "QuickJS",
             dependencies: ["QuickJSC"],
-            path: "Sources",
-            sources: ["QuickJS"],
-            cSettings: [
-                .headerSearchPath("QuickJS")
-            ]
+            path: "Sources/QuickJS",
+            sources: ["QJSConfiguration.h", "QJSConfiguration.m", "QJSContext.h", "QJSContext.m", "QJSRuntime.h", "QJSRuntime.m"],
+            publicHeadersPath: "Sources/QuickJS"
             )
     ]
 )
