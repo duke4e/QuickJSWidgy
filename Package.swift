@@ -23,7 +23,7 @@ let package = Package(
             sources: ["QuickJS"],
             cSettings: [
                 .headerSearchPath("QuickJS")
-            ]            
+            ],
             dependencies: ["QuickJSC"]
             )
     ]
