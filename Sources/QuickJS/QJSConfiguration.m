@@ -39,7 +39,7 @@
 static int eval_buf(JSContext *ctx, const void *buf, int buf_len, const char *filename, int eval_flags) {
     JSValue val;
     int ret;
-
+    
     val = JS_Eval(ctx, buf, buf_len, filename, eval_flags);
     if (JS_IsException(val)) {
         js_std_dump_error(ctx);
@@ -53,12 +53,12 @@ static int eval_buf(JSContext *ctx, const void *buf, int buf_len, const char *fi
 
 static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     NSMutableString *buf = [NSMutableString string];
-
+    
     for (int i = 0; i < argc; i++) {
         if (i > 0) {
             [buf appendString:@"\t"];
         }
-
+        
         const char *str = JS_ToCString(ctx, argv[i]);
         if (!str)
             return JS_EXCEPTION;
@@ -79,20 +79,30 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc, JSValue
 
 - (void)setupContext:(QJSContext *)context2 {
     __weak QJSContext *context = context2;
-
+    
     JSContext *ctx = context.ctx;
-
+    
     const char *str = "import * as std from 'std';\n"
-                      "import * as os from 'os';\n"
-                      "globalThis.std = std;\n"
-                      "globalThis.os = os;\n";
-    eval_buf(ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
-
+    "import * as os from 'os';\n"
+    "globalThis.std = std;\n"
+    "globalThis.os = os;\n";
+    eval_buf(ctx, str, (int)strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
+    
     QJSValue *globalValue = [context getGlobalValue];
-
+    
     QJSValue *consoleValue = [globalValue objectForKey:@"console"];
     JSValue logFunc = JS_NewCFunction(ctx, js_print, "log", 1);
     [consoleValue setObject:[[QJSValue alloc] initWithJSValue:logFunc context:context] forKey:@"log"];
+    
+    context.timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+    dispatch_source_set_timer(context.timer, DISPATCH_TIME_NOW, 0.01 * NSEC_PER_SEC, 0 * NSEC_PER_SEC);
+    __weak QJSContext *weakContext = context;
+    dispatch_source_set_event_handler(context.timer, ^{
+        js_std_loop(weakContext.ctx);
+    });
+    dispatch_resume(context.timer);
+    
+    __block QJSValue *outVal;
 
     dispatch_block_t_2 fetch = ^id(NSString *url, NSDictionary *dic) {
         QJSFetch *fetchObject = [QJSFetch new];
@@ -101,57 +111,54 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc, JSValue
         fetchObject.resolve = [[QJSValue alloc] initWithJSValue:resolving_funcs[0] context:context];
         fetchObject.reject = [[QJSValue alloc] initWithJSValue:resolving_funcs[1] context:context];
 
-        NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
+        dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+
+        NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:NSURLRequestUseProtocolCachePolicy timeoutInterval:10];
 
         fetchObject.task = [[NSURLSession sharedSession] dataTaskWithRequest: req completionHandler:^(NSData * data, NSURLResponse *response, NSError *error) {
             if (!error) {
                 NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
                 NSDictionary *dic =
-                    @{@"ok": httpResponse.statusCode <= 299 && httpResponse.statusCode >= 200 ? @(YES) : @(NO),
-                      @"headers": httpResponse.allHeaderFields,
-                      @"status": @(httpResponse.statusCode),
-                      @"url": httpResponse.URL.absoluteString,
-                      @"json": ^id(){
-                          return [NSJSONSerialization JSONObjectWithData:data
-                                                                 options:NSJSONReadingMutableLeaves
-                                                                   error:nil];
+                @{@"ok": httpResponse.statusCode <= 299 && httpResponse.statusCode >= 200 ? @(YES) : @(NO),
+                  @"headers": httpResponse.allHeaderFields,
+                  @"status": @(httpResponse.statusCode),
+                  @"url": httpResponse.URL.absoluteString,
+                  @"json": ^id(){
+                      return [NSJSONSerialization JSONObjectWithData:data
+                                                             options:NSJSONReadingMutableLeaves
+                                                               error:nil];
+                  }
+                  , @"text" : ^id() {
+                      NSStringEncoding encoding;
+                      if (httpResponse.textEncodingName) {
+                          CFStringRef cfEncoding = (__bridge CFStringRef)httpResponse.textEncodingName;
+                          encoding =
+                          CFStringConvertEncodingToNSStringEncoding(CFStringConvertIANACharSetNameToEncoding(cfEncoding));
+                          
+                      } else {
+                          encoding = NSUTF8StringEncoding;
+                      }
+                      
+                      return [[NSString alloc] initWithData:data encoding:encoding];
+                  }
+                };
+                outVal = [fetchObject.resolve invoke: dic, nil];
+            } else {
+                outVal = [fetchObject.reject invoke:error.localizedDescription, nil];
             }
-            , @"text" : ^id() {
-                NSStringEncoding encoding;
-                if (httpResponse.textEncodingName) {
-                    CFStringRef cfEncoding = (__bridge CFStringRef)httpResponse.textEncodingName;
-                    encoding =
-                        CFStringConvertEncodingToNSStringEncoding(CFStringConvertIANACharSetNameToEncoding(cfEncoding));
+            
+            fetchObject.task = nil;
+            fetchObject.reject = nil;
+            fetchObject.resolve = nil;
 
-                } else {
-                    encoding = NSUTF8StringEncoding;
-                }
-
-                return [[NSString alloc] initWithData:data encoding:encoding];
-            }
-                                             };
-                [fetchObject.resolve invoke: dic, nil];
-    } else {
-        [fetchObject.reject invoke:error.localizedDescription, nil];
-    }
-
-    fetchObject.task = nil;
-    fetchObject.reject = nil;
-    fetchObject.resolve = nil;
-}];
-[fetchObject.task resume];
-return [[QJSValue alloc] initWithJSValue:promise context:context];
-}
-;
-[globalValue setObject:fetch forKey:@"fetch"];
-
-context.timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
-dispatch_source_set_timer(context.timer, DISPATCH_TIME_NOW, 0.01 * NSEC_PER_SEC, 0 * NSEC_PER_SEC);
-__weak QJSContext *weakContext = context;
-dispatch_source_set_event_handler(context.timer, ^{
-    js_std_loop(weakContext.ctx);
-});
-dispatch_resume(context.timer);
+            dispatch_semaphore_signal(semaphore);
+        }];
+        [fetchObject.task resume];
+        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+        return [[QJSValue alloc] initWithJSValue:promise context:context];
+    };
+    
+    [globalValue setObject:fetch forKey:@"fetch"];
 }
 
 - (void)setupRuntime:(QJSRuntime *)runtime {
@@ -159,3 +166,4 @@ dispatch_resume(context.timer);
 }
 
 @end
+
