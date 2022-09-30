@@ -606,12 +606,12 @@ static inline JS_BOOL JS_IsUndefined(JSValueConst v)
 
 static inline JS_BOOL JS_IsException(JSValueConst v)
 {
-    return js_unlikely(JS_VALUE_GET_TAG(v) == (int)JS_TAG_EXCEPTION);
+    return js_unlikely(JS_VALUE_GET_TAG(v) == (long)JS_TAG_EXCEPTION);
 }
 
 static inline JS_BOOL JS_IsUninitialized(JSValueConst v)
 {
-    return js_unlikely(JS_VALUE_GET_TAG(v) == (int)JS_TAG_UNINITIALIZED);
+    return js_unlikely(JS_VALUE_GET_TAG(v) == (long)JS_TAG_UNINITIALIZED);
 }
 
 static inline JS_BOOL JS_IsString(JSValueConst v)
