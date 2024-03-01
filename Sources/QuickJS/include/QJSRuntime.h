@@ -27,8 +27,6 @@ typedef struct JSRuntime JSRuntime;
 
 - (instancetype)initWithConfiguration:(QJSConfiguration *)config;
 
-- (QJSContext *)newContext;
-
 - (NSUInteger)numberOfContexts;
 
 @end

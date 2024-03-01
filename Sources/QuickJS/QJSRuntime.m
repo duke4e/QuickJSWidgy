@@ -10,12 +10,6 @@
 #import "QJSContext.h"
 #import "quickjs-libc.h"
 
-@interface QJSContext (Private)
-
-- (instancetype)initWithRuntime:(QJSRuntime *)runtime;
-
-@end
-
 @interface QJSRuntime ()
 
 // weakToWeakObjectsMapTable
@@ -74,14 +68,6 @@ static NSMapTable<NSNumber *, QJSContext *> *allContextMap;
 - (void)dealloc {
     [runtimeMap removeObjectForKey:self];
     JS_FreeRuntime(self.rt);
-}
-
-- (QJSContext *)newContext {
-    QJSContext *context = [[QJSContext alloc] initWithRuntime:self];
-    [self.config setupContext:context];
-    [self.contextMap setObject:context forKey:context];
-    [allContextMap setObject:context forKey:@((uint64_t)context.ctx)];
-    return context;
 }
 
 - (NSUInteger)numberOfContexts {

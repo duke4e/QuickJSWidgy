@@ -260,13 +260,6 @@ static void js_objc_finalizer(JSRuntime *rt, JSValue val) {
 #endif
 }
 
-// static void js_objc_mark(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func) {
-//    NSObject *object = (__bridge NSObject *)JS_GetOpaque(val, js_objc_class_id);
-//#ifdef DEBUG
-//    NSLog(@"js_objc_mark %@", object);
-//#endif
-//}
-
 static JSValue js_objc_call(JSContext *ctx, JSValueConst func_obj, JSValueConst this_val, int argc,
                             JSValueConst *argv) {
     NSObject *object = (__bridge NSObject *)JS_GetOpaque(func_obj, js_objc_class_id);
@@ -306,13 +299,6 @@ static JSValue js_objc_call(JSContext *ctx, JSValueConst func_obj, JSValueConst 
     }
     return JS_UNDEFINED;
 }
-
-static JSClassDef js_objc_class = {
-    "ObjcBridge",
-    .finalizer = js_objc_finalizer,
-    //    .gc_mark = js_objc_mark,
-    .call = js_objc_call,
-};
 
 static JSValue js_objc_invoke(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic,
                               JSValue *func_data) {
@@ -408,28 +394,6 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
     js_init_module_std(ctx, "std");
     js_init_module_os(ctx, "os");
     return ctx;
-}
-
-- (instancetype)initWithRuntime:(QJSRuntime *)runtime {
-    self = [super init];
-    if (self) {
-        self.valueObjectMap = [NSMapTable strongToWeakObjectsMapTable];
-
-        self.runtime = runtime;
-        self.ctx = JS_NewCustomContext(runtime.rt);
-
-        js_std_add_helpers(self.ctx, 0, NULL);
-
-        js_std_set_worker_new_context_func(JS_NewCustomContext);
-        js_std_init_handlers(runtime.rt);
-
-        JS_NewClass(runtime.rt, js_objc_class_id, &js_objc_class);
-
-        JSContext *ctx = self.ctx;
-        JSValue proto = JS_NewObject(ctx);
-        JS_SetClassProto(ctx, js_objc_class_id, proto);
-    }
-    return self;
 }
 
 - (void)dealloc {
